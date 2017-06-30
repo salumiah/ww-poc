@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="9081" doc:name="HTTP Listener Configuration"/>
+    <validation:config name="Validation_Configuration" doc:name="Validation Configuration"/>
+    <db:mysql-config name="MySQL_Configuration" host="123.176.38.211" port="3306" user="apiuser1" password="apiwhish#369" database="apiproject" doc:name="MySQL Configuration"/>
+    <flow name="ww-poc-mr7Flow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/test" doc:name="HTTP"/>
+        <logger level="INFO" doc:name="Logger" message="Request payload:: #[message.payloadAs(java.lang.String)]"/>
+        <dw:transform-message doc:name="Transform Message" metadata:id="fcded811-0c9b-4bcf-b3a2-e36072bd3aa1">
+			<dw:input-payload doc:sample="sample/employee-account-sample.xml"  mimeType="application/xml" />
+         	<dw:set-payload  resource="classpath:mapping/employee-account.dwl"/>
+        </dw:transform-message>
+        <set-variable variableName="outputPayload" value="#[message.payloadAs(java.lang.String)]" doc:name="Variable"/>
+        <logger message=" Response payload:: #[flowVars.outputPayload]" level="INFO" doc:name="Logger"/>
+        <enricher source="#[flowVars.outputPayload]" target="#[flowVars.outputPayload]" doc:name="Message Enricher">
+            <db:insert config-ref="MySQL_Configuration" doc:name="Database">
+                <db:parameterized-query><![CDATA[insert into emp (name, city) values (#[json:empname],#[json:empcity])]]></db:parameterized-query>
+            </db:insert>
+        </enricher>
+ 
+        <set-payload value="#[flowVars.outputPayload]" doc:name="Set Payload"/>
+    </flow>
+</mule>
